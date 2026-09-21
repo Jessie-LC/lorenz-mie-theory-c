@@ -24,13 +24,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(MIE PRIVATE -mavx2 -mfma -O3 -fno-fast-math)
     target_link_libraries(
         MIE PUBLIC
-        opengl32.lib
     )
 else(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(MIE PRIVATE -O0 -mavx2)
     target_link_libraries(
         MIE PUBLIC
-        opengl32.lib
     )
 endif()
 
