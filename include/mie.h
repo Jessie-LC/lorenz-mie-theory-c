@@ -78,28 +78,44 @@ void CalculateLorenzMieTheory(
     fcomplex64_t S1 = { 0.0, 0.0 };
     fcomplex64_t S2 = { 0.0, 0.0 };
     fcomplex64_t  S = { 0.0, 0.0 };
-    *scattering = 0.0;
+    double cscattering = 0.0;
     for(uint32_t n = 1u; n < M; ++n) {
         S = Complex64_AddC(S, Complex64_MulS(Complex64_AddC(aN[n], bN[n]), (double)(2 * n + 1)));
         double term = (double)(2 * n + 1) / (double)(n * n + 1);
         S1 = Complex64_AddC(S1, Complex64_MulS(Complex64_AddC(Complex64_MulS(aN[n], piN[n]), Complex64_MulS(bN[n], tauN[n])), term));
         S2 = Complex64_AddC(S2, Complex64_MulS(Complex64_AddC(Complex64_MulS(aN[n], tauN[n]), Complex64_MulS(bN[n], piN[n])), term));
-        *scattering += (double)(2 * n + 1) * ((Complex64_Abs(aN[n])*Complex64_Abs(aN[n])) + (Complex64_Abs(bN[n])*Complex64_Abs(bN[n])));
+        cscattering += (double)(2 * n + 1) * ((Complex64_Abs(aN[n])*Complex64_Abs(aN[n])) + (Complex64_Abs(bN[n])*Complex64_Abs(bN[n])));
     }
     S = Complex64_MulS(S, 0.5);
     fcomplex64_t tmpExt = Complex64_DivC(S, Complex64_MulC(k, k));
-    *extinction = 4.0 * M_PI * tmpExt.val[0];
+    double cextinction = 4.0 * M_PI * tmpExt.val[0];
 
     double nkhSquared = Complex64_Abs(nHost)*Complex64_Abs(nHost);
     double      alpha = 4.0 * M_PI * radius * nHost.val[1] / lambda;
     double      gamma = alpha <= 1e-6 ? 1.0 : (2.0 * (1.0 + (alpha - 1.0) * exp(alpha))) / (alpha*alpha);
-    *scattering = (((lambda*lambda) * exp(-alpha)) / (2.0 * M_PI * gamma * nkhSquared)) * (*scattering);
+    cscattering = (((lambda*lambda) * exp(-alpha)) / (2.0 * M_PI * gamma * nkhSquared)) * cscattering;
 
     double absS1 = Complex64_Abs(S1);
     double absS2 = Complex64_Abs(S2);
-    *unpolarized = (absS1*absS1 + absS2*absS2) / (2.0 * (Complex64_Abs(k)*Complex64_Abs(k)) * (*scattering));
-    *s_polarized = (absS1*absS1) / ((Complex64_Abs(k)*Complex64_Abs(k)) * (*scattering));
-    *p_polarized = (absS2*absS2) / ((Complex64_Abs(k)*Complex64_Abs(k)) * (*scattering));
+    double phase_unpolarized = (absS1*absS1 + absS2*absS2) / (2.0 * (Complex64_Abs(k)*Complex64_Abs(k)) * cscattering);
+    double phase_s_polarized = (absS1*absS1) / ((Complex64_Abs(k)*Complex64_Abs(k)) * cscattering);
+    double phase_p_polarized = (absS2*absS2) / ((Complex64_Abs(k)*Complex64_Abs(k)) * cscattering);
+
+    if (extinction != NULL) {
+        *extinction = cextinction;
+    }
+    if (scattering != NULL) {
+        *scattering = cscattering;
+    }
+    if (s_polarized != NULL) {
+        *s_polarized = phase_s_polarized;
+    }
+    if (p_polarized != NULL) {
+        *p_polarized = phase_p_polarized;
+    }
+    if (unpolarized != NULL) {
+        *unpolarized = phase_unpolarized;
+    }
 
     free(piN);
     free(tauN);
