@@ -119,6 +119,10 @@ void CalculateLorenzMieTheory(
 
     free(piN);
     free(tauN);
+    free(AparticleN);
+    free(AhostN);
+    free(aN);
+    free(bN);
 }
 
 #endif
