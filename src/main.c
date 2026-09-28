@@ -4,37 +4,109 @@
 
 #include "mie.h"
 
+static inline double NormalDistribution(double x, double sigma, double mean) {
+    return (1.0 / sqrt(2.0 * M_PI * (sigma*sigma))) * exp(-((pow(x - mean, 2.0)) / (2.0 * sigma*sigma)));
+}
+
+typedef struct ParticleDistribution {
+    double* radii;
+    double* numberDensity;
+
+    fcomplex64_t refractiveIndex;
+
+    uint32_t binCount;
+} pdistribution_t;
+
+static inline pdistribution_t CreateNormalDistribution(
+    double minimumRadius, 
+    double maximumRadius, 
+    double radiusStep, 
+
+    double Vdesired, 
+
+    double sigma, 
+    double mean 
+) {
+    pdistribution_t dist;
+    dist.binCount      = (uint32_t)((abs((maximumRadius * 1e6) - (minimumRadius * 1e6)) / (radiusStep * 1e6)));
+    dist.radii         = (double*)malloc(sizeof(double[dist.binCount]));
+    dist.numberDensity = (double*)malloc(sizeof(double[dist.binCount]));
+    double V = 0.0;
+    for(uint32_t i = 0u; i < dist.binCount; ++i) {
+        double       radius = ((double)i / (double)(dist.binCount-1u)) * maximumRadius + minimumRadius;
+        double distribution = NormalDistribution(radius, sigma/1e6, mean/1e6);
+        dist.radii[i]         = radius;
+        dist.numberDensity[i] = distribution;
+        V += pow(radius, 3.0) * distribution * radiusStep;
+    }
+    V = V * ((4.0 * M_PI) / 3.0);
+    for(uint32_t i = 0u; i < dist.binCount; ++i) {
+        dist.numberDensity[i] = dist.numberDensity[i] * (Vdesired / V);
+    }
+
+    return dist;
+}
+static inline void DeleteDistribution(pdistribution_t* dist) {
+    free(dist->radii);
+    free(dist->numberDensity);
+}
+
 int main(int argv, char** argc) {
-    fcomplex64_t particle = { 1.33333, 1e-4 };
+    fcomplex64_t particle = { 1.3333, 1e-4 };
     fcomplex64_t     host = { 1.00028, 0.0 };
-    double         lambda = 550e-9;
-    double         radius = 1e-6;
-    for(uint32_t angle = 0u; angle < 180u; ++angle) {
-        double dtheta = M_PI / (double)(180u - 1u);
+    double         lambda = 500e-9;
+    double  minimumRadius = 1e-8;
+    double  maximumRadius = 1e-5;
+    double     radiusStep = 1e-8;
+    double   waterDensity = 1000.0;
+    double    waterWeight = 0.0001;
+    double    waterVolume = waterWeight < 1e-12 ? 0.0 : waterWeight / waterDensity;
+    double      airVolume = 1.0 - waterVolume;
+    pdistribution_t  dist = CreateNormalDistribution(
+        minimumRadius, 
+        maximumRadius, 
+        radiusStep, 
+
+        (waterVolume / airVolume), 
+
+        2.0, 
+        0.8 
+    );
+    for(uint32_t angle = 0u; angle < (180u); ++angle) {
+        double dtheta = M_PI / (double)((180u) - 1u);
         double theta = (double)angle * dtheta;
 
-        double scattering;
-        double extinction;
-        double s_polarized;
-        double p_polarized;
-        double unpolarized;
-        CalculateLorenzMieTheory(
-            theta, 
-            lambda, 
-            radius, 
-            host, 
-            particle, 
+        double ensembleScattering = 0.0;
+        double ensembleExtinction = 0.0;
+        double ensemblePhase = 0.0;
+        for(uint32_t i = 0u; i < dist.binCount; ++i) {
+            double scattering;
+            double extinction;
+            double s_polarized;
+            double p_polarized;
+            double unpolarized;
+            CalculateLorenzMieTheory(
+                theta, 
+                lambda, 
+                dist.radii[i], 
+                host, 
+                particle, 
 
-            &scattering, 
-            &extinction, 
+                &scattering, 
+                &extinction, 
 
-            &s_polarized, 
-            &p_polarized, 
-            &unpolarized 
-        );
+                &s_polarized, 
+                &p_polarized, 
+                &unpolarized 
+            );
 
-        printf("%f;%f\n", theta, log(unpolarized));
+            ensembleScattering += dist.numberDensity[i] * scattering * radiusStep;
+            ensemblePhase += dist.numberDensity[i] * scattering * unpolarized * radiusStep;
+        }
+
+        printf("%f;%f\n", theta, log(ensemblePhase / ensembleScattering));
     }
+    DeleteDistribution(&dist);
 
     return 0;
 }

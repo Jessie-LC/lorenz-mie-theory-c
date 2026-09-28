@@ -10,12 +10,16 @@ add_compile_definitions(UNICODE _UNICODE _CRT_SECURE_NO_WARNINGS)
 
 include_directories(
     AFTER
-    "${CMAKE_SOURCE_DIR}/../external/khronos"
 )
 
 add_executable(MIE)
 target_compile_definitions(MIE PUBLIC c_std_23)
 
+target_sources(
+    MIE
+    PRIVATE
+    main.c
+)
 
 if(WIN32)
 
@@ -77,9 +81,3 @@ target_include_directories(
 )
 
 endif()
-
-target_sources(
-    MIE
-    PRIVATE
-    main.c
-)
