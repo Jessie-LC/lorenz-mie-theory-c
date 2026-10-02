@@ -8,7 +8,7 @@
 
 #include "./math/math.h"
 
-void CalculateLorenzMieTheory(
+static inline void CalculateLorenzMieTheory(
     double theta, 
     double lambda, 
     double radius, 
