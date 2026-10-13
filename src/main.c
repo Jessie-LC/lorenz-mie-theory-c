@@ -109,7 +109,7 @@ static inline pdistribution_t CreateWendlandDistribution(
     double V = 0.0;
     for(uint32_t i = 0u; i < dist.binCount; ++i) {
         double       radius = ((double)i / (double)(dist.binCount-1u)) * maximumRadius + minimumRadius;
-        double distribution = WendlandKernelC6((radius*1e6) - mean, sigma);
+        double distribution = WendlandKernelC6(sqrt(pow((radius*1e6) - mean, 2.0)), sigma);
         dist.radii[i]         = radius;
         dist.numberDensity[i] = distribution;
         V += pow(radius, 3.0) * distribution * radiusStep;
@@ -137,16 +137,20 @@ int main(int argv, char** argc) {
     double    waterWeight = 0.0001;
     double    waterVolume = waterWeight < 1e-12 ? 0.0 : waterWeight / waterDensity;
     double      airVolume = 1.0 - waterVolume;
-    pdistribution_t  dist = CreateLogNormalDistribution(
+    pdistribution_t  dist = CreateWendlandDistribution(
         minimumRadius, 
         maximumRadius, 
         radiusStep, 
 
         (waterVolume / airVolume), 
 
-        2.0, 
+        10.0, 
         0.8 
     );
+    for(uint32_t i = 0u; i < dist.binCount; ++i) {
+        printf("%f, %f\n", dist.radii[i]/1e-6, log(dist.numberDensity[i] + 1.0));
+    }
+    printf("\n\n\n");
     for(uint32_t angle = 0u; angle < (180u); ++angle) {
         double dtheta = M_PI / (double)((180u) - 1u);
         double theta = (double)angle * dtheta;
@@ -155,6 +159,10 @@ int main(int argv, char** argc) {
         double ensembleExtinction = 0.0;
         double ensemblePhase = 0.0;
         for(uint32_t i = 0u; i < dist.binCount; ++i) {
+            if (dist.numberDensity[i] == 0.0) {
+                // Literally no particles exist with this radius
+                continue;
+            }
             double scattering;
             double extinction;
             double s_polarized;
