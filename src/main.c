@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -130,9 +131,9 @@ int main(int argv, char** argc) {
     fcomplex64_t particle = { 1.3333, 1e-4 };
     fcomplex64_t     host = { 1.00028, 0.0 };
     double         lambda = 500e-9;
-    double  minimumRadius = 1e-8;
+    double  minimumRadius = 1e-7;
     double  maximumRadius = 1e-5;
-    double     radiusStep = 1e-8;
+    double     radiusStep = 1e-7;
     double   waterDensity = 1000.0;
     double    waterWeight = 0.0001;
     double    waterVolume = waterWeight < 1e-12 ? 0.0 : waterWeight / waterDensity;
@@ -144,52 +145,64 @@ int main(int argv, char** argc) {
 
         (waterVolume / airVolume), 
 
-        10.0, 
+        4.0, 
         0.8 
     );
-    for(uint32_t i = 0u; i < dist.binCount; ++i) {
-        printf("%f, %f\n", dist.radii[i]/1e-6, log(dist.numberDensity[i] + 1.0));
-    }
-    printf("\n\n\n");
-    for(uint32_t angle = 0u; angle < (180u); ++angle) {
-        double dtheta = M_PI / (double)((180u) - 1u);
+
+    const uint32_t      angles = 720u;
+    const uint32_t wavelengths = 471u/4u;
+    FILE*            phaseFile = fopen("phase.dat", "w+b");
+    double*      phaseFunction = (double*)malloc(sizeof(double)*angles*wavelengths);
+    for(uint32_t angle = 0u; angle < angles; ++angle) {
+        double dtheta = M_PI / (double)(angles - 1u);
         double theta = (double)angle * dtheta;
 
-        double ensembleScattering = 0.0;
-        double ensembleExtinction = 0.0;
-        double ensemblePhase = 0.0;
-        for(uint32_t i = 0u; i < dist.binCount; ++i) {
-            if (dist.numberDensity[i] == 0.0) {
-                // Literally no particles exist with this radius
-                continue;
+        for(uint32_t wavelength = 0u; wavelength < wavelengths; ++wavelength) {
+            double             lambda = (((double)wavelength / (double)wavelengths) * 471.0 + 360.0) * 1e-9;
+            double ensembleScattering = 0.0;
+            double ensembleExtinction = 0.0;
+            double      ensemblePhase = 0.0;
+            for(uint32_t i = 0u; i < dist.binCount; ++i) {
+                if (dist.numberDensity[i] == 0.0) {
+                    // Literally no particles exist with this radius
+                    continue;
+                }
+                double scattering;
+                double extinction;
+                double s_polarized;
+                double p_polarized;
+                double unpolarized;
+                CalculateLorenzMieTheory(
+                    theta, 
+                    lambda, 
+                    dist.radii[i], 
+                    host, 
+                    particle, 
+
+                    &scattering, 
+                    &extinction, 
+
+                    &s_polarized, 
+                    &p_polarized, 
+                    &unpolarized 
+                );
+
+                ensembleScattering += dist.numberDensity[i] * scattering * radiusStep;
+                ensemblePhase += dist.numberDensity[i] * scattering * unpolarized * radiusStep;
             }
-            double scattering;
-            double extinction;
-            double s_polarized;
-            double p_polarized;
-            double unpolarized;
-            CalculateLorenzMieTheory(
-                theta, 
-                lambda, 
-                dist.radii[i], 
-                host, 
-                particle, 
-
-                &scattering, 
-                &extinction, 
-
-                &s_polarized, 
-                &p_polarized, 
-                &unpolarized 
-            );
-
-            ensembleScattering += dist.numberDensity[i] * scattering * radiusStep;
-            ensemblePhase += dist.numberDensity[i] * scattering * unpolarized * radiusStep;
+            phaseFunction[wavelength+wavelengths*angle] = ensemblePhase;
+            char*          value = (char*)malloc(sizeof(float));
+            float fEnsemblePhase = (float)ensemblePhase;
+            memcpy(&value[0], &fEnsemblePhase, sizeof(float));
+            fwrite(&value[0], sizeof(float), 1u, phaseFile);
+            printf(" %f\t\r", ((double)angle/(double)angles)*100.0);
         }
-
-        printf("%f;%f\n", theta, log(ensemblePhase / ensembleScattering));
     }
     DeleteDistribution(&dist);
+
+    // fwrite((void*)phaseFunction, sizeof(double), angles*wavelengths, phaseFile);
+    fclose(phaseFile);
+    free(phaseFunction);
 
     return 0;
 }

@@ -35,7 +35,6 @@ static inline void CalculateLorenzMieTheory(
     fcomplex64_t*     AhostN = (fcomplex64_t*)malloc(sizeof(fcomplex64_t[M+2u]));
     fcomplex64_t*         aN = (fcomplex64_t*)malloc(sizeof(fcomplex64_t[M+1u]));
     fcomplex64_t*         bN = (fcomplex64_t*)malloc(sizeof(fcomplex64_t[M+1u]));
-    
     for(uint32_t n = 0; n <= M+1u; ++n) {
         AparticleN[n] = SetComplex64(0.0, 0.0);
         AhostN[n]     = SetComplex64(0.0, 0.0);
