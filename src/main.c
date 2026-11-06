@@ -223,7 +223,6 @@ int main(int argv, char** argc) {
             double p1 = phaseFunction[wavelength+wavelengths*(angle - 1)] + phaseFunction[wavelength+wavelengths*angle];
             double p2 = anglesFunction[angle-1] - anglesFunction[angle];
             cdf[wavelength + angle * wavelengths] = cdf[wavelength + (angle-1) * wavelengths] + 2.0 * M_PI * p1 * 0.5 * p2;
-            printf("%f,%f\n", p1, p2);
         }
     }
     for(uint32_t wavelength = 0u; wavelength < wavelengths; ++wavelength) {
@@ -231,7 +230,6 @@ int main(int argv, char** argc) {
         for(uint32_t angle = 0u; angle < angles; ++angle) {
             phaseFunction[wavelength+wavelengths*angle] /= maxCDF;
             cdf[wavelength + angle * wavelengths]       /= maxCDF;
-            // printf("%f,%f,%f\n", maxCDF, phaseFunction[wavelength+wavelengths*angle], cdf[wavelength + angle * wavelengths]);
         }
     }
     for(uint32_t angle = 0u; angle < angles; ++angle) {
