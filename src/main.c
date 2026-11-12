@@ -134,7 +134,7 @@ static inline void DeleteDistribution(pdistribution_t* dist) {
 }
 
 int main(int argv, char** argc) {
-    fcomplex64_t particle = { 1.3333, 1e-4 };
+    fcomplex64_t particle = { 1.3333, 1e-6 };
     fcomplex64_t     host = { 1.00028, 0.0 };
     double  minimumRadius = 1e-7;
     double  maximumRadius = 8e-6;
