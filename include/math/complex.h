@@ -108,4 +108,24 @@ static inline fcomplex64_t Complex64_Log(fcomplex64_t z) {
     return result;
 }
 
+static inline void Complex64_Add2C(
+    fcomplex64_t* result1, 
+    fcomplex64_t* result2, 
+    fcomplex64_t lhs1, 
+    fcomplex64_t rhs1, 
+    fcomplex64_t lhs2, 
+    fcomplex64_t rhs2 
+) {
+    __m256d op = _mm_add_pd(
+        _mm256_set_pd(lhs1.val[1], lhs1.val[0], lhs2.val[1], lhs2.val[0]), 
+        _mm256_set_pd(rhs1.val[1], rhs1.val[0], rhs2.val[1], rhs2.val[0]) 
+    );
+    alignas(32) double result[4];
+    _mm256_store_pd(&result[0], op);
+    *result1.val[0] = result[2];
+    *result1.val[1] = result[3];
+    *result2.val[0] = result[0];
+    *result2.val[1] = result[1];
+}
+
 #endif

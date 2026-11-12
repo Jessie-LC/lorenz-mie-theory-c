@@ -249,29 +249,9 @@ int main(int argv, char** argc) {
     }
     fclose(phaseFile);
     fclose(cdfFile);
+    free(cdf);
     free(phaseFunction);
-
-    /*
-
-            cdf[w][a] = (
-                 cdf[w][a - 1]
-               + 2.0 * np.pi * (phase[w][a - 1] + phase[w][a]) * 0.5
-               * (angles[a - 1] - angles[a])
-            )
-
-    # Normalize both the phase and the CDF
-    for w in range(0, wavelengths_n):
-
-        max_cdf = cdf[w][-1]
-
-        for a in range(0, angles_n):
-
-            phase[w][a] /= max_cdf
-            cdf[w][a]   /= max_cdf
-
-    return phase, cdf
-
-    */
+    free(anglesFunction);
 
     return 0;
 }
